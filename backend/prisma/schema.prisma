@@ -1,0 +1,214 @@
+// QualityTrack - Prisma Schema
+// Configured with SQLite for portable zero-config execution.
+// A 100% equivalent schema for PostgreSQL is available in schema.postgresql.prisma.
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  name         String
+  passwordHash String
+  role         String      @default("QA_ENGINEER") // QA_ENGINEER, QA_LEAD, ADMIN
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  projects     Project[]
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  baseUrl     String?       @default("http://localhost:5001")
+  currentEnv  String        @default("Development")
+  userId      String?
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  environments Environment[]
+  endpoints    APIEndpoint[]
+  testSuites   TestSuite[]
+  testCases    TestCase[]
+  testRuns     TestRun[]
+  bugReports   BugReport[]
+
+  @@index([userId])
+}
+
+model Environment {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String   // "Development", "Staging", "Production"
+  baseUrl     String
+  variables   String   @default("[]") // JSON string of [{ key, value, isSecret, enabled }]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model APIEndpoint {
+  id           String      @id @default(uuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name         String
+  method       String      // "GET", "POST", "PUT", "PATCH", "DELETE"
+  path         String      // e.g. "/api/users"
+  description  String?
+  headers      String?     // JSON
+  bodyTemplate String?     // JSON
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  testCases    TestCase[]
+  bugReports   BugReport[]
+
+  @@index([projectId])
+}
+
+model TestSuite {
+  id          String     @id @default(uuid())
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  testCases   TestCase[]
+  testRuns    TestRun[]
+
+  @@index([projectId])
+}
+
+model TestCase {
+  id             String       @id @default(uuid())
+  testCaseId     String       // e.g. "TC001"
+  projectId      String
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  suiteId        String?
+  suite          TestSuite?   @relation(fields: [suiteId], references: [id], onDelete: SetNull)
+  endpointId     String?
+  endpoint       APIEndpoint? @relation(fields: [endpointId], references: [id], onDelete: SetNull)
+  name           String
+  description    String?
+  method         String       // "GET", "POST", etc.
+  path           String       // "/api/users"
+  headers        String?      // JSON string
+  queryParams    String?      // JSON string
+  body           String?      // JSON or raw body
+  authType       String?      @default("none") // "none", "bearer", "basic", "apiKey"
+  authConfig     String?      // JSON
+  expectedStatus Int          @default(200)
+  category       String       // "Positive Testing", "Negative Testing", "Boundary Testing", "Edge Case Testing", "Functional Testing", "Integration Testing"
+  priority       String       @default("Medium") // "Low", "Medium", "High", "Critical"
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  assertions     Assertion[]
+  testResults    TestResult[]
+  bugReports     BugReport[]
+
+  @@index([projectId])
+  @@index([suiteId])
+  @@index([endpointId])
+  @@index([category])
+}
+
+model Assertion {
+  id            String   @id @default(uuid())
+  testCaseId    String
+  testCase      TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  type          String   // "STATUS_CODE", "BODY_CONTAINS", "PROPERTY_EQUALS", "PROPERTY_TYPE", "RESPONSE_TIME", "TEXT_CONTAINS", "NOT_NULL"
+  target        String?  // path in body like "data.user.email" or null for status
+  operator      String   // "equals", "contains", "less_than", "greater_than", "is_type", "not_null", "exists"
+  expectedValue String   // serialized string value
+  createdAt     DateTime @default(now())
+
+  @@index([testCaseId])
+}
+
+model TestRun {
+  id             String       @id @default(uuid())
+  projectId      String
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  suiteId        String?
+  suite          TestSuite?   @relation(fields: [suiteId], references: [id], onDelete: SetNull)
+  executionType  String       @default("MANUAL") // "INDIVIDUAL", "SUITE", "PROJECT", "AUTOMATED"
+  status         String       @default("PENDING") // "PENDING", "RUNNING", "PASSED", "FAILED", "ERROR"
+  totalTests     Int          @default(0)
+  passedTests    Int          @default(0)
+  failedTests    Int          @default(0)
+  skippedTests   Int          @default(0)
+  durationMs     Int          @default(0)
+  environment    String       @default("Development")
+  triggeredBy    String       @default("Manual")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  testResults    TestResult[]
+
+  @@index([projectId])
+  @@index([suiteId])
+  @@index([createdAt])
+}
+
+model TestResult {
+  id               String      @id @default(uuid())
+  testRunId        String
+  testRun          TestRun     @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  testCaseId       String
+  testCase         TestCase    @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  status           String      // "PASSED", "FAILED", "SKIPPED", "ERROR"
+  statusCode       Int?
+  responseTimeMs   Int?
+  responseSize     Int?
+  responseHeaders  String?     // JSON
+  responseBody     String?     // JSON/text
+  errorMessage     String?
+  assertionResults String?     // JSON serialized array
+  createdAt        DateTime    @default(now())
+
+  bugReports       BugReport[]
+
+  @@index([testRunId])
+  @@index([testCaseId])
+}
+
+model BugReport {
+  id               String       @id @default(uuid())
+  bugId            String       @unique // "BUG-001"
+  title            String
+  description      String
+  stepsToReproduce String
+  expectedResult   String
+  actualResult     String
+  severity         String       // "Critical", "High", "Medium", "Low"
+  priority         String       // "High", "Medium", "Low"
+  status           String       @default("Open") // "Open", "In Progress", "Resolved", "Closed"
+  projectId        String
+  project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  endpointId       String?
+  endpoint         APIEndpoint? @relation(fields: [endpointId], references: [id], onDelete: SetNull)
+  testCaseId       String?
+  testCase         TestCase?    @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
+  testResultId     String?
+  testResult       TestResult?  @relation(fields: [testResultId], references: [id], onDelete: SetNull)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([projectId])
+  @@index([endpointId])
+  @@index([testCaseId])
+  @@index([status])
+}

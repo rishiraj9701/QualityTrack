@@ -1,0 +1,19 @@
+{
+  "name": "qualitytrack-root",
+  "version": "1.0.0",
+  "description": "QualityTrack - API Testing & Quality Assurance Platform",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && npm --prefix backend install && npm --prefix demo-api install && npm --prefix frontend install",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:demo": "npm --prefix demo-api run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev": "concurrently -n \"BACKEND,DEMO_API,FRONTEND\" -c \"blue,green,magenta\" \"npm run dev:backend\" \"npm run dev:demo\" \"npm run dev:frontend\"",
+    "build": "npm --prefix backend run build && npm --prefix demo-api run build && npm --prefix frontend run build",
+    "test": "npm --prefix backend test",
+    "seed": "npm --prefix backend run seed"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
