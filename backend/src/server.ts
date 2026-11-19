@@ -22,15 +22,15 @@ const PORT = process.env.PORT || 5000;
 
 // Security & Parsing Middleware
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({ origin: '*' }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Global Authentication Context
 app.use(authenticate);
 
-// API Health Check
-app.get('/api/health', (req: Request, res: Response) => {
+// Health Check Endpoints (both /health and /api/health for cloud load balancers and frontend)
+const healthHandler = (req: Request, res: Response) => {
   res.status(200).json({
     status: 'UP',
     platform: 'QualityTrack Core Backend',
@@ -38,7 +38,10 @@ app.get('/api/health', (req: Request, res: Response) => {
     uptimeSeconds: Math.floor(process.uptime()),
     database: 'Connected',
   });
-});
+};
+
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 // Mount Routes
 app.use('/api/auth', authRouter);

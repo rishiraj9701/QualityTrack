@@ -33,7 +33,8 @@
 14. [Simulated Demo API Testbed](#-14-simulated-demo-api-testbed)
 15. [Technical Demonstration Walkthrough](#-15-technical-demonstration-walkthrough)
 16. [Screenshots](#-16-screenshots)
-17. [License](#-17-license)
+17. [Production Deployment on Render](#-17-production-deployment-on-render)
+18. [License](#-18-license)
 
 ---
 
@@ -459,6 +460,20 @@ When presenting or demonstrating QualityTrack:
 
 ---
 
-## 📜 17. License
+## 🚀 17. Production Deployment on Render
+
+QualityTrack is prepared for 1-click cloud deployment on [Render](https://render.com) using the included `render.yaml` blueprint.
+
+The blueprint provisions:
+1. **Render PostgreSQL** (`qualitytrack-db`)
+2. **Backend Web Service** (`qualitytrack-backend`) with health checks, automatic Prisma schema detection, and migrations
+3. **Demo API Web Service** (`qualitytrack-demo-api`)
+4. **Frontend Static Site** (`qualitytrack-frontend`) with client-side SPA routing and rewrite rules
+
+For comprehensive step-by-step instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+---
+
+## 📜 18. License
 
 Open source under the [MIT License](LICENSE).

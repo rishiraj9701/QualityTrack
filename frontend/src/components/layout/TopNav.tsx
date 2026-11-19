@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useProject } from '../../context/ProjectContext';
-import axios from 'axios';
+import { apiClient } from '../../services/api';
 
 export const TopNav: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
@@ -24,8 +24,8 @@ export const TopNav: React.FC = () => {
   useEffect(() => {
     const checkDemoHealth = async () => {
       try {
-        // Probe via backend proxy to avoid direct localhost cross-port issues if any
-        const res = await axios.get('/api/health');
+        // Probe backend health to verify API connectivity
+        const res = await apiClient.get('/health');
         if (res.status === 200) {
           setDemoApiHealthy(true);
         } else {

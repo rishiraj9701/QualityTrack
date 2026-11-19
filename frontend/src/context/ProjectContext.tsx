@@ -80,8 +80,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const interpolate = useCallback(
     (template: string): string => {
       if (!template) return '';
+      const defaultDemoUrl = import.meta.env.VITE_DEMO_API_URL || 'http://localhost:5001';
       const vars: Record<string, string> = {
-        baseUrl: activeEnvironment?.baseUrl || activeProject?.baseUrl || 'http://localhost:5001',
+        baseUrl: activeEnvironment?.baseUrl || activeProject?.baseUrl || defaultDemoUrl,
       };
 
       if (activeEnvironment?.variables) {

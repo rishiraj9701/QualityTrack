@@ -11,6 +11,7 @@ import {
   Layers,
 } from 'lucide-react';
 import axios from 'axios';
+import { api } from '../services/api';
 import { useProject } from '../context/ProjectContext';
 import { useToast } from '../context/ToastContext';
 
@@ -21,29 +22,43 @@ export const Settings: React.FC = () => {
   const [resetting, setResetting] = useState(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
 
+  const demoBaseUrl = (
+    import.meta.env.VITE_DEMO_API_URL ||
+    activeEnvironment?.baseUrl ||
+    activeProject?.baseUrl ||
+    'http://localhost:5001'
+  ).replace(/\/+$/, '');
+
   const handleResetDemoData = async () => {
     try {
       setResetting(true);
-      // Reset demo target through demo api port 5001 directly or proxy
-      const res = await axios.post('http://localhost:5001/api/users/reset');
-      if (res.data.success) {
-        success('Demo target API user store successfully restored to initial clean state!');
-        setResetMessage(`Reset completed: ${res.data.userCount} default demo users seeded.`);
-      }
-    } catch (err: any) {
-      // Fallback via proxy if direct cross-origin is blocked
+      const targetUrl = `${demoBaseUrl}/api/users/reset`;
+
+      // Try via backend proxy (consistent across local and remote CORS environments)
       try {
-        const proxyRes = await axios.post('/api/proxy/send', {
+        const proxyRes = await api.proxy.send({
           method: 'POST',
-          url: 'http://localhost:5001/api/users/reset',
+          url: targetUrl,
         });
-        if (proxyRes.data.statusCode === 200) {
-          success('Demo target API restored to initial clean state via backend proxy!');
-          setResetMessage('Reset completed via backend proxy.');
+        if (proxyRes.data?.statusCode === 200) {
+          success('Demo target API user store successfully restored to initial clean state!');
+          const body = typeof proxyRes.data.data === 'object' ? proxyRes.data.data : null;
+          setResetMessage(`Reset completed: ${body?.userCount ?? 'default'} demo users seeded.`);
           return;
         }
-      } catch {}
-      error('Failed to reset demo data. Ensure Demo API is active on port 5001.');
+      } catch {
+        // Fallback to direct client call if reachable
+      }
+
+      const res = await axios.post(targetUrl);
+      if (res.data?.success) {
+        success('Demo target API user store successfully restored to initial clean state!');
+        setResetMessage(`Reset completed: ${res.data.userCount} default demo users seeded.`);
+      } else {
+        error('Failed to reset demo data. Ensure Demo API is active and reachable.');
+      }
+    } catch (err: any) {
+      error(`Failed to reset demo data: ${err.message || 'Target API unreachable'}`);
     } finally {
       setResetting(false);
     }
@@ -74,7 +89,7 @@ export const Settings: React.FC = () => {
                 Simulated User Management REST API
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Isolated target service running on Port 5001 for QA test validation
+                Isolated target service for QA test validation
               </p>
             </div>
           </div>
@@ -85,7 +100,7 @@ export const Settings: React.FC = () => {
 
           <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-800 text-xs font-mono space-y-1">
             <div className="text-slate-400 text-[11px]">Active Target URL:</div>
-            <div className="text-emerald-500 font-bold">http://localhost:5001/api/users</div>
+            <div className="text-emerald-500 font-bold">{demoBaseUrl}/api/users</div>
           </div>
 
           <div className="pt-2 flex items-center justify-between">

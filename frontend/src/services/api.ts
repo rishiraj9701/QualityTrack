@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+const rawBase = import.meta.env.VITE_API_BASE_URL || '/api';
+const cleanBase = rawBase.replace(/\/+$/, '');
+export const apiBase = cleanBase.endsWith('/api') ? cleanBase : `${cleanBase}/api`;
+
 export const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: apiBase,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -105,7 +109,7 @@ export const api = {
   reports: {
     summary: (params?: any) => apiClient.get('/reports/summary', { params }),
     exportCsvUrl: (projectId?: string) =>
-      `/api/reports/export-csv${projectId ? `?projectId=${projectId}` : ''}`,
+      `${apiBase}/reports/export-csv${projectId ? `?projectId=${projectId}` : ''}`,
   },
 
   // Dashboard

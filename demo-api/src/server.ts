@@ -11,6 +11,16 @@ const PORT = process.env.PORT || 5001;
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
+// Health check endpoint for cloud load balancers and monitors
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'UP',
+    service: 'QualityTrack Demo API',
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
+  });
+});
+
 // Routes
 app.use('/api', router);
 
